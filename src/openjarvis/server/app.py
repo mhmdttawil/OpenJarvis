@@ -536,6 +536,15 @@ def create_app(
         except Exception as exc:
             logger.debug("Webhook routes init skipped: %s", exc)
 
+    # Group-chat-capable iMessage (SendBlue) webhook; independent of the
+    # per-agent channel bindings above.
+    try:
+        from openjarvis.server.imessage_group import create_imessage_group_router
+
+        app.include_router(create_imessage_group_router())
+    except Exception as exc:
+        logger.debug("iMessage group route init skipped: %s", exc)
+
     # Serve static frontend assets if the static/ directory exists
     static_dir = pathlib.Path(__file__).parent / "static"
     if static_dir.is_dir():

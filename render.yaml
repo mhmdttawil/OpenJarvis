@@ -56,6 +56,15 @@ services:
         value: phnum_4301m771sdjve518rvbb5e4985et
       - key: OPS_WEBHOOK_KEY          # shared secret the ElevenLabs agent sends on /webhooks/ops/query
         sync: false
+      # --- iMessage via SendBlue (1:1 and group chats; answers when addressed "Jarvis ...") ---
+      - key: SENDBLUE_API_KEY_ID
+        sync: false
+      - key: SENDBLUE_API_SECRET_KEY
+        sync: false
+      - key: SENDBLUE_FROM_NUMBER      # the SendBlue line, E.164
+        sync: false
+      - key: JARVIS_PARTNER_PHONE      # Maikl's cell, E.164 - allowed to talk to Jarvis on iMessage
+        sync: false
       # --- Ops Portal (read-only access to the Supabase sp_docs table) ---
       - key: OPS_SUPABASE_URL
         value: https://pnepffdqptvrhoxcibzq.supabase.co
