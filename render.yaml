@@ -12,7 +12,7 @@ services:
     # Claude via the cloud engine. Render's dockerCommand REPLACES the Dockerfile ENTRYPOINT
     # (not just CMD), so it must start with the `jarvis` executable. It also does not expand
     # $PORT, so the port is pinned here AND in the PORT env var below - change both together.
-    dockerCommand: jarvis serve --host 0.0.0.0 --port 10000 --engine cloud --model claude-sonnet-4-6 --agent orchestrator
+    dockerCommand: openjarvis-entrypoint jarvis serve --host 0.0.0.0 --port 10000 --engine cloud --model claude-sonnet-4-6 --agent orchestrator
     healthCheckPath: /health
     autoDeploy: true
     disk:

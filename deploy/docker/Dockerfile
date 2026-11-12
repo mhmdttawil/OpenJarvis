@@ -76,12 +76,15 @@ RUN groupadd --system --gid 10001 openjarvis && \
     useradd --system --uid 10001 --gid openjarvis \
         --create-home --home-dir /home/openjarvis openjarvis
 ENV HOME=/home/openjarvis
-USER openjarvis
+
+# The container starts as root only so the entrypoint can fix ownership of a
+# root-mounted persistent volume at $OPENJARVIS_HOME; it then drops to the
+# `openjarvis` user before running the command (see entrypoint.sh).
+COPY --chmod=755 deploy/docker/entrypoint.sh /usr/local/bin/openjarvis-entrypoint
 
 EXPOSE 8000
 
-# Keep `jarvis` as the image entrypoint so Docker and Compose command overrides
-# remain subcommands (for example, `docker run IMAGE serve ...`). Platforms
-# such as Render replace CMD while preserving this entrypoint.
-ENTRYPOINT ["jarvis"]
-CMD ["serve", "--host", "0.0.0.0", "--port", "8000"]
+# Render's dockerCommand replaces ENTRYPOINT as well as CMD, so render.yaml
+# must spell out `openjarvis-entrypoint jarvis serve ...` in full.
+ENTRYPOINT ["openjarvis-entrypoint"]
+CMD ["jarvis", "serve", "--host", "0.0.0.0", "--port", "8000"]
