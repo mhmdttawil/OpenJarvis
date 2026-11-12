@@ -148,6 +148,16 @@ except ImportError:
     pass
 
 try:
+    import openjarvis.tools.phone_call  # noqa: F401
+except ImportError:
+    pass
+
+try:
+    import openjarvis.tools.ops_portal  # noqa: F401
+except ImportError:
+    pass
+
+try:
     import openjarvis.tools.digest_collect  # noqa: F401
 except ImportError:
     pass

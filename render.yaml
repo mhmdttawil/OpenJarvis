@@ -1,47 +1,48 @@
-# Render Blueprint for the OpenJarvis FastAPI server.
-# Deploys src/openjarvis/server/app.py via deploy/docker/Dockerfile.
-# Apply at: https://dashboard.render.com/blueprint/new?repo=https://github.com/open-jarvis/OpenJarvis
+# Render Blueprint for Moe's OpenJarvis server (Stonepoint / Steelblue ops assistant).
+# Drop this file at the ROOT of your fork, replacing the original render.yaml, then
+# apply at: https://dashboard.render.com/blueprint/new?repo=https://github.com/<your-github-user>/OpenJarvis
 services:
   - type: web
     name: openjarvis-server
     runtime: docker
-    plan: free
-    region: oregon
+    plan: starter            # $7/mo. Needed for the persistent disk below; "free" loses all state on restart.
+    region: ohio             # closest Render region to Miami
     dockerfilePath: ./deploy/docker/Dockerfile
     dockerContext: .
-    # Override the Dockerfile CMD while preserving its `jarvis` entrypoint.
-    # Render's default web-service port is 10000. Pin PORT and the CLI argument
-    # to that same value because Docker commands do not interpolate `$PORT`.
-    # Pin a cloud model as well as the engine. The repository's default model
-    # is local-only, so omitting this would make `jarvis serve` reject the
-    # otherwise healthy cloud engine during startup.
-    dockerCommand: serve --host 0.0.0.0 --port 10000 --engine cloud --model gpt-4o-mini
+    # Claude via the cloud engine. Render's Docker command does not expand $PORT,
+    # so the port is pinned here AND in the PORT env var below - change both together.
+    dockerCommand: serve --host 0.0.0.0 --port 10000 --engine cloud --model claude-sonnet-4-6 --agent orchestrator
     healthCheckPath: /health
     autoDeploy: true
+    disk:
+      name: openjarvis-home
+      mountPath: /home/openjarvis/.openjarvis   # config, memory, agent DB, connector tokens survive restarts
+      sizeGB: 1
     envVars:
-      # Force the cloud engine path. The free Render plan has no GPU and the
-      # bundled local backends (Ollama/vLLM) cannot run here. The command above
-      # selects the OpenAI-backed cloud engine and a model it can serve.
-
-      # Keep Render's expected public port aligned with the fixed Docker
-      # command above. Change both values together when customizing the port.
       - key: PORT
         value: "10000"
-
-      # Auth for the OpenJarvis API itself. Required because the server refuses
-      # to bind to a non-loopback host without an API key (check_bind_safety).
-      - key: OPENJARVIS_API_KEY
-        generateValue: true
-
-      # Required at initial Blueprint creation. Render's `sync: false` fields
-      # are operator-supplied secrets; using one provider here keeps the
-      # one-click contract deterministic instead of incorrectly requiring a
-      # key for every supported cloud provider.
-      - key: OPENAI_API_KEY
-        sync: false
-
-      # The free service filesystem is ephemeral. OpenJarvis state under this
-      # directory is lost on every restart, spin-down, or deploy. See
-      # docs/deployment/render.md before storing credentials or durable state.
       - key: OPENJARVIS_HOME
         value: /home/openjarvis/.openjarvis
+      # Bearer key clients must send on /v1/* and /api/* (server refuses 0.0.0.0 without it)
+      - key: OPENJARVIS_API_KEY
+        generateValue: true
+      # --- secrets you paste in the Render dashboard (sync: false = asked at creation) ---
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE_NUMBER      # the Twilio number Jarvis texts/calls FROM, E.164 e.g. +17545550100
+        sync: false
+      - key: JARVIS_OWNER_PHONE       # YOUR mobile, E.164. The phone_call / send_sms tools default to this number.
+        sync: false
+      - key: JARVIS_VOICE_URL         # Twilio Function URL (…/voice) from twilio/voice-inbound.js; lets you talk back when Jarvis calls
+        sync: false
+      # --- Ops Portal (read-only access to the Supabase sp_docs table) ---
+      - key: OPS_SUPABASE_URL
+        value: https://pnepffdqptvrhoxcibzq.supabase.co
+      - key: OPS_SUPABASE_ANON_KEY    # the project's public anon key (Supabase dashboard > Project Settings > API)
+        sync: false
+      - key: OPS_API_KEY              # the portal's x-ops-key (sp_config.api_key)
+        sync: false
