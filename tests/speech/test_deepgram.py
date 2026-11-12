@@ -1,4 +1,4 @@
-"""Tests for Deepgram speech backend."""
+"""Tests for Deepgram speech backend (REST API via httpx)."""
 
 from unittest.mock import MagicMock, patch
 
@@ -21,41 +21,50 @@ def test_deepgram_registers():
 
 
 def test_deepgram_transcribe():
-    mock_client = MagicMock()
-    mock_result = MagicMock()
-    mock_channel = MagicMock()
-    mock_alternative = MagicMock()
-    mock_alternative.transcript = "Hello from Deepgram"
-    mock_alternative.confidence = 0.92
-    mock_channel.alternatives = [mock_alternative]
-    mock_channel.detected_language = "en"
-    mock_result.results.channels = [mock_channel]
-    mock_result.metadata.duration = 1.8
-    mock_client.listen.rest.v.return_value.transcribe_file.return_value = mock_result
+    mock_resp = MagicMock()
+    mock_resp.raise_for_status.return_value = None
+    mock_resp.json.return_value = {
+        "metadata": {"duration": 1.8},
+        "results": {
+            "channels": [
+                {
+                    "detected_language": "en",
+                    "alternatives": [
+                        {"transcript": "Hello from Deepgram", "confidence": 0.92}
+                    ],
+                }
+            ]
+        },
+    }
 
-    with patch("openjarvis.speech.deepgram.DeepgramClient", return_value=mock_client):
-        from openjarvis.speech.deepgram import DeepgramSpeechBackend
-
+    with patch("openjarvis.speech.deepgram.httpx.post", return_value=mock_resp) as post:
         backend = DeepgramSpeechBackend(api_key="test-key")
-        result = backend.transcribe(b"fake audio", format="wav")
+        result = backend.transcribe(b"fake audio", format="webm")
 
-        assert isinstance(result, TranscriptionResult)
-        assert result.text == "Hello from Deepgram"
+    assert isinstance(result, TranscriptionResult)
+    assert result.text == "Hello from Deepgram"
+    assert result.confidence == 0.92
+    assert result.language == "en"
+    assert result.duration_seconds == 1.8
+    kwargs = post.call_args.kwargs
+    assert kwargs["headers"]["Authorization"] == "Token test-key"
+    assert kwargs["headers"]["Content-Type"] == "audio/webm"
+    assert kwargs["content"] == b"fake audio"
+
+
+def test_deepgram_transcribe_requires_key():
+    backend = DeepgramSpeechBackend(api_key="")
+    with pytest.raises(RuntimeError):
+        backend.transcribe(b"x")
 
 
 def test_deepgram_health():
-    with patch("openjarvis.speech.deepgram.DeepgramClient"):
-        from openjarvis.speech.deepgram import DeepgramSpeechBackend
-
-        backend = DeepgramSpeechBackend(api_key="test-key")
-        assert backend.health() is True
+    backend = DeepgramSpeechBackend(api_key="test-key")
+    assert backend.health() is True
 
 
 def test_deepgram_health_no_key():
-    with patch("openjarvis.speech.deepgram.DeepgramClient"):
-        from openjarvis.speech.deepgram import DeepgramSpeechBackend
-
-        backend = DeepgramSpeechBackend.__new__(DeepgramSpeechBackend)
-        backend._client = None
-        backend._api_key = ""
-        assert backend.health() is False
+    backend = DeepgramSpeechBackend.__new__(DeepgramSpeechBackend)
+    backend._client = None
+    backend._api_key = ""
+    assert backend.health() is False

@@ -373,6 +373,53 @@ def serve(
                                 tools.append(t)
                                 existing.add(t.spec.name)
 
+                    # Skills as tools (mirrors ask.py / SystemBuilder). serve.py
+                    # never wired these, so skills installed with `jarvis skill`
+                    # were invisible to the HTTP/GUI agent.
+                    skill_catalog_xml = None
+                    skill_few_shot_examples: list[str] = []
+                    if tools and getattr(config, "skills", None) and config.skills.enabled:
+                        try:
+                            from pathlib import Path as _Path
+
+                            from openjarvis.skills.manager import SkillManager
+                            from openjarvis.tools._stubs import ToolExecutor
+
+                            _pipeline_executor = ToolExecutor(
+                                tools,
+                                bus,
+                                capability_policy=sec.capability_policy,
+                                agent_id=agent_key,
+                                interactive=False,
+                                confirm_callback=lambda prompt: True,
+                            )
+                            _skill_manager = SkillManager(
+                                bus, capability_policy=sec.capability_policy
+                            )
+                            _skill_paths = [_Path(config.skills.skills_dir).expanduser()]
+                            _skill_manager.discover(paths=_skill_paths)
+                            _skill_manager.set_tool_executor(_pipeline_executor)
+                            _existing = {t.spec.name for t in tools}
+                            _added = False
+                            for _st in _skill_manager.get_skill_tools(
+                                tool_executor=_pipeline_executor
+                            ):
+                                if _st.spec.name not in _existing:
+                                    tools.append(_st)
+                                    _existing.add(_st.spec.name)
+                                    _added = True
+                            if _added:
+                                skill_catalog_xml = _skill_manager.get_catalog_xml()
+                                skill_few_shot_examples = (
+                                    _skill_manager.get_few_shot_examples()
+                                )
+                                logger.info(
+                                    "Loaded %d skills for served agent",
+                                    len(_skill_manager.skill_names()),
+                                )
+                        except Exception as exc:  # noqa: BLE001
+                            logger.warning("Failed to initialize skills: %s", exc)
+
                     if tools:
                         agent_kwargs["tools"] = tools
                     # Reuse these for the scheduler's ToolExecutor (#263).
@@ -411,6 +458,10 @@ def serve(
                         agent_template=config.agent.default_system_prompt or "",
                         memory_files_config=config.memory_files,
                         system_prompt_config=config.system_prompt,
+                        skill_catalog_xml=locals().get("skill_catalog_xml"),
+                        skill_few_shot_examples=locals().get(
+                            "skill_few_shot_examples"
+                        ),
                     )
 
                 agent = agent_cls(engine, model_name, **agent_kwargs)

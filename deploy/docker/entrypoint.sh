@@ -26,6 +26,12 @@ if [ -d "$SEED_DIR/personas" ]; then
     done
 fi
 
+if [ -d "$SEED_DIR/skills" ]; then
+    for f in $(cd "$SEED_DIR/skills" && find . -type f); do
+        seed "$SEED_DIR/skills/$f" "$OJ_HOME/skills/$f"
+    done
+fi
+
 # Render "Secret Files" (and any other secrets mount) override the repo copies
 # on every start, so private persona text never has to live in git.
 SECRETS_DIR="${OPENJARVIS_SECRETS_DIR:-/etc/secrets}"

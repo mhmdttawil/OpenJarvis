@@ -40,6 +40,14 @@ services:
         sync: false
       - key: JARVIS_VOICE_URL         # Twilio Function URL (…/voice) from twilio/voice-inbound.js; lets you talk back when Jarvis calls
         sync: false
+      # --- Voice in the web app (dictation + spoken replies) ---
+      - key: DEEPGRAM_API_KEY        # speech-to-text for the mic button
+        sync: false
+      - key: ELEVENLABS_API_KEY      # text-to-speech for spoken replies
+        sync: false
+      - key: ELEVENLABS_MODEL
+        value: eleven_flash_v2_5     # lowest-latency ElevenLabs model; eleven_multilingual_v2 for max quality
+      # Optional: ELEVENLABS_VOICE_ID (a voice id from your ElevenLabs Voice Library); default is "George".
       # --- Ops Portal (read-only access to the Supabase sp_docs table) ---
       - key: OPS_SUPABASE_URL
         value: https://pnepffdqptvrhoxcibzq.supabase.co

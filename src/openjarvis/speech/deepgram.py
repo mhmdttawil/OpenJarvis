@@ -1,31 +1,44 @@
-"""Deepgram speech-to-text backend (cloud)."""
+"""Deepgram cloud speech-to-text backend.
+
+Talks to Deepgram's pre-recorded REST API directly over ``httpx`` instead of
+the ``deepgram-sdk`` package, whose public API changed incompatibly between
+major versions (v3 ``PrerecordedOptions`` / v4+ ``DeepgramClient.listen.v1``)
+and left this backend silently unusable. Requires ``DEEPGRAM_API_KEY``.
+"""
 
 from __future__ import annotations
 
 import os
 from typing import List, Optional
 
+import httpx
+
 from openjarvis.core.registry import SpeechRegistry
 from openjarvis.speech._stubs import SpeechBackend, TranscriptionResult
 
-try:
-    from deepgram import DeepgramClient, PrerecordedOptions
-except ImportError:
-    DeepgramClient = None  # type: ignore[assignment, misc]
-    PrerecordedOptions = None  # type: ignore[assignment, misc]
+_API_URL = "https://api.deepgram.com/v1/listen"
+_MIME = {
+    "wav": "audio/wav",
+    "mp3": "audio/mpeg",
+    "ogg": "audio/ogg",
+    "flac": "audio/flac",
+    "webm": "audio/webm",
+    "m4a": "audio/mp4",
+    "mp4": "audio/mp4",
+}
 
 
 @SpeechRegistry.register("deepgram")
 class DeepgramSpeechBackend(SpeechBackend):
-    """Cloud speech-to-text using Deepgram API."""
+    """Cloud speech-to-text using Deepgram's REST API."""
 
     backend_id = "deepgram"
 
-    def __init__(self, api_key: Optional[str] = None) -> None:
+    def __init__(self, api_key: Optional[str] = None, *, model: str = "") -> None:
         self._api_key = api_key or os.environ.get("DEEPGRAM_API_KEY", "")
-        self._client = None
-        if self._api_key and DeepgramClient is not None:
-            self._client = DeepgramClient(self._api_key)
+        self._model = model or os.environ.get("DEEPGRAM_MODEL", "nova-3")
+        # Kept for backward compatibility with callers that checked ``_client``.
+        self._client = object() if self._api_key else None
 
     def transcribe(
         self,
@@ -34,64 +47,48 @@ class DeepgramSpeechBackend(SpeechBackend):
         format: str = "wav",
         language: Optional[str] = None,
     ) -> TranscriptionResult:
-        """Transcribe audio using Deepgram's API."""
-        if self._client is None:
-            raise RuntimeError("Deepgram client not initialized (missing API key?)")
+        if not self._api_key:
+            raise RuntimeError("Deepgram API key not configured (DEEPGRAM_API_KEY)")
 
-        mime_map = {
-            "wav": "audio/wav",
-            "mp3": "audio/mpeg",
-            "ogg": "audio/ogg",
-            "flac": "audio/flac",
-            "webm": "audio/webm",
-            "m4a": "audio/mp4",
-        }
-        mime_type = mime_map.get(format, "audio/wav")
-
-        options_kwargs: dict = {"model": "nova-2", "smart_format": True}
+        params = {"model": self._model, "smart_format": "true", "punctuate": "true"}
         if language:
-            options_kwargs["language"] = language
+            params["language"] = language
         else:
-            options_kwargs["detect_language"] = True
+            params["detect_language"] = "true"
 
-        payload = {"buffer": audio, "mimetype": mime_type}
-
-        if PrerecordedOptions is not None:
-            options = PrerecordedOptions(**options_kwargs)
-        else:
-            options = options_kwargs
-
-        response = self._client.listen.rest.v("1").transcribe_file(
-            payload,
-            options,
+        resp = httpx.post(
+            _API_URL,
+            params=params,
+            content=audio,
+            headers={
+                "Authorization": f"Token {self._api_key}",
+                "Content-Type": _MIME.get(format, "audio/wav"),
+            },
+            timeout=60.0,
         )
+        resp.raise_for_status()
+        data = resp.json()
 
-        # Extract transcript from response
-        channels = response.results.channels
-        if channels and channels[0].alternatives:
-            alt = channels[0].alternatives[0]
-            text = alt.transcript
-            confidence = getattr(alt, "confidence", None)
-        else:
-            text = ""
-            confidence = None
-
-        detected_lang = None
+        channels = (data.get("results") or {}).get("channels") or []
+        text, confidence, detected = "", None, None
         if channels:
-            detected_lang = getattr(channels[0], "detected_language", None)
-
-        duration = getattr(response.metadata, "duration", 0.0)
+            alts = channels[0].get("alternatives") or []
+            if alts:
+                text = alts[0].get("transcript", "") or ""
+                confidence = alts[0].get("confidence")
+            detected = channels[0].get("detected_language")
+        duration = float((data.get("metadata") or {}).get("duration") or 0.0)
 
         return TranscriptionResult(
             text=text,
-            language=detected_lang,
+            language=detected,
             confidence=confidence,
             duration_seconds=duration,
             segments=[],
         )
 
     def health(self) -> bool:
-        return self._client is not None and bool(self._api_key)
+        return bool(self._api_key)
 
     def supported_formats(self) -> List[str]:
-        return ["wav", "mp3", "ogg", "flac", "webm", "m4a"]
+        return list(_MIME.keys())

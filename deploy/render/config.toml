@@ -47,6 +47,23 @@ host = "0.0.0.0"
 port = 10000
 agent = "orchestrator"
 
+# Voice in the web app: dictation via Deepgram (cloud STT), replies spoken by
+# ElevenLabs. Keys: DEEPGRAM_API_KEY, ELEVENLABS_API_KEY; voice via
+# ELEVENLABS_VOICE_ID (default: ElevenLabs "George"), model via ELEVENLABS_MODEL.
+[speech]
+backend = "deepgram"
+tts_backend = "elevenlabs"
+voice_id = ""
+voice_speed = 1.0
+
+# Skills: Hermes imports + Stonepoint-specific ones, seeded from the image into
+# $OPENJARVIS_HOME/skills. `jarvis skill` in the container can add more.
+[skills]
+enabled = true
+active = "*"
+auto_discover = true
+auto_sync = false
+
 [scheduler]
 enabled = true
 poll_interval = 60
