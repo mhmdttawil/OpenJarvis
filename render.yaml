@@ -47,7 +47,15 @@ services:
         sync: false
       - key: ELEVENLABS_MODEL
         value: eleven_flash_v2_5     # lowest-latency ElevenLabs model; eleven_multilingual_v2 for max quality
-      # Optional: ELEVENLABS_VOICE_ID (a voice id from your ElevenLabs Voice Library); default is "George".
+      - key: ELEVENLABS_VOICE_ID
+        value: onwK4e9ZLuTAKqWW03F9  # "Daniel" (British, steady) - same voice as the phone agent
+      # --- Phone calls through the ElevenLabs conversational agent (real-time two-way) ---
+      - key: ELEVENLABS_AGENT_ID
+        value: agent_4501m771rtndesmtgemtc1hhjmy2
+      - key: ELEVENLABS_AGENT_PHONE_NUMBER_ID
+        value: phnum_4301m771sdjve518rvbb5e4985et
+      - key: OPS_WEBHOOK_KEY          # shared secret the ElevenLabs agent sends on /webhooks/ops/query
+        sync: false
       # --- Ops Portal (read-only access to the Supabase sp_docs table) ---
       - key: OPS_SUPABASE_URL
         value: https://pnepffdqptvrhoxcibzq.supabase.co

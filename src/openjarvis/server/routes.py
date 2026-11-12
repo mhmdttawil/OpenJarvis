@@ -11,6 +11,7 @@ from dataclasses import replace
 from typing import Dict, Any
 
 from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 
 from openjarvis.core.paths import get_config_dir
@@ -1383,6 +1384,43 @@ async def server_info(request: Request):
         "agent": agent_id,
         "engine": getattr(request.app.state, "engine_name", ""),
     }
+
+
+class OpsQueryRequest(BaseModel):
+    query: str
+    company: str = "stonepoint"
+    arg: str = ""
+
+
+@router.post("/webhooks/ops/query")
+async def ops_query(body: OpsQueryRequest, request: Request) -> Dict[str, Any]:
+    """Direct, LLM-free access to the Ops Portal tool for voice agents.
+
+    Used as a webhook tool by the ElevenLabs phone agent so lookups take well
+    under a second. Lives under /webhooks (outside the bearer-auth prefix) and
+    is protected by its own shared secret: the ``X-Ops-Key`` header must equal
+    the ``OPS_WEBHOOK_KEY`` environment variable (or, as a fallback, the
+    server's ``OPENJARVIS_API_KEY``). Read-only by construction.
+    """
+    import hmac as _hmac
+    import os as _os
+
+    expected = _os.environ.get("OPS_WEBHOOK_KEY", "") or _os.environ.get(
+        "OPENJARVIS_API_KEY", ""
+    )
+    provided = request.headers.get("x-ops-key", "")
+    if not expected or not provided or not _hmac.compare_digest(provided, expected):
+        raise HTTPException(status_code=403, detail="Invalid ops key")
+
+    from openjarvis.tools.ops_portal import OpsPortalTool
+
+    result = await asyncio.to_thread(
+        OpsPortalTool().execute,
+        query=body.query,
+        company=body.company or "stonepoint",
+        arg=body.arg or "",
+    )
+    return {"ok": result.success, "result": result.content}
 
 
 @router.get("/v1/cloud/keys")

@@ -13,6 +13,11 @@ Both default to the owner's number from ``JARVIS_OWNER_PHONE`` so the agent can
 be told "call me" without ever being given a phone number in the prompt. Numbers
 other than the owner's are refused unless ``JARVIS_ALLOW_ANY_NUMBER=1``.
 
+When ``ELEVENLABS_API_KEY``, ``ELEVENLABS_AGENT_ID`` and
+``ELEVENLABS_AGENT_PHONE_NUMBER_ID`` are set, ``phone_call`` places the call
+through the ElevenLabs conversational agent (two-way, real-time) and only falls
+back to a Twilio text-to-speech call otherwise.
+
 Required env vars: ``TWILIO_ACCOUNT_SID``, ``TWILIO_AUTH_TOKEN``,
 ``TWILIO_PHONE_NUMBER`` (the Twilio number to call/text from),
 ``JARVIS_OWNER_PHONE``. Optional ``JARVIS_VOICE_URL`` (Twilio Function URL of
@@ -111,6 +116,43 @@ class PhoneCallTool(BaseTool):
         repeat = max(1, min(int(params.get("repeat", 2) or 2), 3))
         try:
             to = _resolve_to(str(params.get("to", "")))
+            # Preferred path: an ElevenLabs conversational agent places the call,
+            # opens with the message and then holds a real two-way conversation.
+            el_key = os.environ.get("ELEVENLABS_API_KEY", "").strip()
+            el_agent = os.environ.get("ELEVENLABS_AGENT_ID", "").strip()
+            el_phone = os.environ.get("ELEVENLABS_AGENT_PHONE_NUMBER_ID", "").strip()
+            if el_key and el_agent and el_phone:
+                import json as _json
+                import urllib.request as _ur
+
+                payload = {
+                    "agent_id": el_agent,
+                    "agent_phone_number_id": el_phone,
+                    "to_number": to,
+                    "conversation_initiation_client_data": {
+                        "conversation_config_override": {
+                            "agent": {"first_message": f"Jarvis here with an update. {message}"}
+                        },
+                        "dynamic_variables": {"owner_number": os.environ.get("JARVIS_OWNER_PHONE", "")},
+                    },
+                }
+                req = _ur.Request(
+                    "https://api.elevenlabs.io/v1/convai/twilio/outbound-call",
+                    data=_json.dumps(payload).encode(),
+                    headers={"xi-api-key": el_key, "Content-Type": "application/json"},
+                    method="POST",
+                )
+                with _ur.urlopen(req, timeout=20) as resp:
+                    data = _json.loads(resp.read().decode() or "{}")
+                if data.get("success", True):
+                    return ToolResult(
+                        tool_name="phone_call",
+                        content=f"Call placed via Jarvis voice agent (conversation {data.get('conversation_id', '?')}).",
+                        success=True,
+                        latency_seconds=time.time() - t0,
+                        metadata={"provider": "elevenlabs", **{k: data.get(k) for k in ("conversation_id", "callSid")}},
+                    )
+                # fall through to plain Twilio if ElevenLabs refused
             client = _twilio_client()
             said = escape(message)
             body = "".join(
