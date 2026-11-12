@@ -17,7 +17,17 @@ export const isTauri = () => typeof window !== 'undefined' && !!window.__TAURI_I
 export type CloudKeyStatus = Record<string, boolean>;
 
 export async function getCloudKeyStatus(): Promise<CloudKeyStatus> {
-  if (!isTauri()) return {};
+  if (!isTauri()) {
+    // Web GUI served by a remote server: ask the server which provider keys
+    // are configured in its environment (booleans only).
+    try {
+      const res = await apiFetch(`/v1/cloud/keys`);
+      if (!res.ok) return {};
+      return (await res.json()) as CloudKeyStatus;
+    } catch {
+      return {};
+    }
+  }
   try {
     const { invoke } = await import('@tauri-apps/api/core');
     const rows = await invoke<Array<{ key: string; set: boolean }>>('get_cloud_key_status');

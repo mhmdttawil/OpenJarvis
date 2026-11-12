@@ -172,10 +172,6 @@ function CloudProviderStatus({ label, keyName }: { label: string; keyName: strin
   const desktopKeyStorage = isTauri();
 
   const refresh = useCallback(async () => {
-    if (!desktopKeyStorage) {
-      setHasKey(false);
-      return;
-    }
     try {
       const status = await getCloudKeyStatus();
       setHasKey(!!status[keyName]);

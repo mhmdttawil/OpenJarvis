@@ -8,7 +8,7 @@ import threading
 import uuid
 import weakref
 from dataclasses import replace
-from typing import Any
+from typing import Dict, Any
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -1383,6 +1383,30 @@ async def server_info(request: Request):
         "agent": agent_id,
         "engine": getattr(request.app.state, "engine_name", ""),
     }
+
+
+@router.get("/v1/cloud/keys")
+async def cloud_key_status() -> Dict[str, bool]:
+    """Report which cloud-provider API keys are set in the server environment.
+
+    Only booleans are returned, never the values. The web GUI (non-desktop)
+    uses this to decide which Cloud Models to offer; the desktop app reads
+    its own secure storage instead.
+    """
+    import os as _os
+
+    keys = (
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "GEMINI_API_KEY",
+        "GOOGLE_API_KEY",
+        "OPENROUTER_API_KEY",
+        "ATLASCLOUD_API_KEY",
+    )
+    status = {k: bool(_os.environ.get(k, "").strip()) for k in keys}
+    if status["GOOGLE_API_KEY"] and not status["GEMINI_API_KEY"]:
+        status["GEMINI_API_KEY"] = True
+    return status
 
 
 @router.get("/health")
