@@ -48,7 +48,7 @@ services:
       - key: ELEVENLABS_MODEL
         value: eleven_flash_v2_5     # lowest-latency ElevenLabs model; eleven_multilingual_v2 for max quality
       - key: ELEVENLABS_VOICE_ID
-        value: onwK4e9ZLuTAKqWW03F9  # "Daniel" (British, steady) - same voice as the phone agent
+        value: xru6qZB94sJdkyqP12qN  # "James - English Butler" - same voice as the phone agent
       # --- Phone calls through the ElevenLabs conversational agent (real-time two-way) ---
       - key: ELEVENLABS_AGENT_ID
         value: agent_4501m771rtndesmtgemtc1hhjmy2
