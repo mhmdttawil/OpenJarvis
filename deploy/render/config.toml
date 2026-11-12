@@ -1,0 +1,75 @@
+# OpenJarvis server config for the Stonepoint Render deployment.
+# Seeded into $OPENJARVIS_HOME/config.toml by the container entrypoint when no
+# config exists there (set OPENJARVIS_RESEED=1 to overwrite on next start).
+
+[engine]
+default = "cloud"
+
+[intelligence]
+default_model = "claude-sonnet-4-6"
+fallback_model = "claude-haiku-4-5"
+temperature = 0.4
+max_tokens = 2048
+
+[agent]
+default_agent = "orchestrator"
+max_turns = 20
+context_from_memory = true
+
+[tools]
+# Deliberately no shell_exec / file tools on an internet-facing server.
+enabled = "think,calculator,web_search,ops_portal,phone_call,send_sms"
+
+[tools.storage]
+default_backend = "sqlite"
+
+[tools.mcp]
+enabled = false
+
+# Long-term memory: facts extracted from conversations, stored on the disk.
+[memory]
+enabled = true
+backend = "local"
+extraction_model = ""
+max_facts = 2000
+
+[memory_files]
+persona_name = "stonepoint"
+nudge_interval = 10
+
+[system_prompt]
+soul_max_chars = 9000
+memory_max_chars = 4000
+user_max_chars = 4000
+
+[server]
+host = "0.0.0.0"
+port = 10000
+agent = "orchestrator"
+
+[scheduler]
+enabled = true
+poll_interval = 60
+
+[analytics]
+enabled = false
+
+[telemetry]
+enabled = true
+
+[traces]
+enabled = false
+
+[channel]
+enabled = false
+default_agent = "orchestrator"
+
+[security]
+enabled = true
+mode = "warn"
+scan_input = true
+scan_output = true
+secret_scanner = true
+pii_scanner = true
+enforce_tool_confirmation = false
+ssrf_protection = true
