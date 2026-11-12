@@ -3,46 +3,46 @@
 # apply at: https://dashboard.render.com/blueprint/new?repo=https://github.com/<your-github-user>/OpenJarvis
 services:
   - type: web
-    name: openjarvis-server
-    runtime: docker
-    plan: starter            # $7/mo. Needed for the persistent disk below; "free" loses all state on restart.
-    region: ohio             # closest Render region to Miami
-    dockerfilePath: ./deploy/docker/Dockerfile
-    dockerContext: .
-    # Claude via the cloud engine. Render's Docker command does not expand $PORT,
-    # so the port is pinned here AND in the PORT env var below - change both together.
-    dockerCommand: serve --host 0.0.0.0 --port 10000 --engine cloud --model claude-sonnet-4-6 --agent orchestrator
-    healthCheckPath: /health
-    autoDeploy: true
-    disk:
-      name: openjarvis-home
-      mountPath: /home/openjarvis/.openjarvis   # config, memory, agent DB, connector tokens survive restarts
-      sizeGB: 1
-    envVars:
-      - key: PORT
-        value: "10000"
-      - key: OPENJARVIS_HOME
-        value: /home/openjarvis/.openjarvis
-      # Bearer key clients must send on /v1/* and /api/* (server refuses 0.0.0.0 without it)
-      - key: OPENJARVIS_API_KEY
-        generateValue: true
-      # --- secrets you paste in the Render dashboard (sync: false = asked at creation) ---
-      - key: ANTHROPIC_API_KEY
-        sync: false
-      - key: TWILIO_ACCOUNT_SID
-        sync: false
-      - key: TWILIO_AUTH_TOKEN
-        sync: false
-      - key: TWILIO_PHONE_NUMBER      # the Twilio number Jarvis texts/calls FROM, E.164 e.g. +17545550100
-        sync: false
-      - key: JARVIS_OWNER_PHONE       # YOUR mobile, E.164. The phone_call / send_sms tools default to this number.
-        sync: false
-      - key: JARVIS_VOICE_URL         # Twilio Function URL (…/voice) from twilio/voice-inbound.js; lets you talk back when Jarvis calls
-        sync: false
-      # --- Ops Portal (read-only access to the Supabase sp_docs table) ---
-      - key: OPS_SUPABASE_URL
-        value: https://pnepffdqptvrhoxcibzq.supabase.co
-      - key: OPS_SUPABASE_ANON_KEY    # the project's public anon key (Supabase dashboard > Project Settings > API)
-        sync: false
-      - key: OPS_API_KEY              # the portal's x-ops-key (sp_config.api_key)
-        sync: false
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,name: openjarvis-server
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,runtime: docker
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,plan: starter            # $7/mo. Needed for the persistent disk below; "free" loses all state on restart.
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,region: ohio             # closest Render region to Miami
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,dockerfilePath: ./deploy/docker/Dockerfile
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,dockerContext: .
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,# Claude via the cloud engine. Render's Docker command does not expand $PORT,
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,# so the port is pinned here AND in the PORT env var below - change both together.
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,dockerCommand: jarvis serve --host 0.0.0.0 --port 10000 --engine cloud --model claude-sonnet-4-6 --agent orchestrator
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,healthCheckPath: /health
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,autoDeploy: true
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,disk:
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,  name: openjarvis-home
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,  mountPath: /home/openjarvis/.openjarvis   # config, memory, agent DB, connector tokens survive restarts
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,  sizeGB: 1
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,envVars:
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,  - key: PORT
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,    value: "10000"
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,  - key: OPENJARVIS_HOME
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,    value: /home/openjarvis/.openjarvis
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,  # Bearer key clients must send on /v1/* and /api/* (server refuses 0.0.0.0 without it)
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,  - key: OPENJARVIS_API_KEY
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,    generateValue: true
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,  # --- secrets you paste in the Render dashboard (sync: false = asked at creation) ---
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,  - key: ANTHROPIC_API_KEY
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,    sync: false
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,  - key: TWILIO_ACCOUNT_SID
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,    sync: false
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,  - key: TWILIO_AUTH_TOKEN
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,    sync: false
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,  - key: TWILIO_PHONE_NUMBER      # the Twilio number Jarvis texts/calls FROM, E.164 e.g. +17545550100
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,    sync: false
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,  - key: JARVIS_OWNER_PHONE       # YOUR mobile, E.164. The phone_call / send_sms tools default to this number.
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,    sync: false
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,  - key: JARVIS_VOICE_URL         # Twilio Function URL (…/voice) from twilio/voice-inbound.js; lets you talk back when Jarvis calls
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,    sync: false
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,  # --- Ops Portal (read-only access to the Supabase sp_docs table) ---
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,  - key: OPS_SUPABASE_URL
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,    value: https://pnepffdqptvrhoxcibzq.supabase.co
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,  - key: OPS_SUPABASE_ANON_KEY    # the project's public anon key (Supabase dashboard > Project Settings > API)
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,    sync: false
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,  - key: OPS_API_KEY              # the portal's x-ops-key (sp_config.api_key)
+ Claude via the cloud engine. Render.s Docker command does not expand $PORT,    sync: false
