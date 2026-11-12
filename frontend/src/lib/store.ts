@@ -265,6 +265,11 @@ interface AppState {
   setModelLoading: (loading: boolean) => void;
 }
 
+/** Model ids served by the direct cloud engine rather than a local engine. */
+export function isDirectCloudModelId(id: string): boolean {
+  return /^(gpt-|o[1-9]|chatgpt-|claude-|gemini-|openrouter\/|atlas)/i.test(id);
+}
+
 export const useAppStore = create<AppState>((set, get) => {
   const initial = loadConversations();
   const convList = Object.values(initial.conversations).sort(
@@ -498,8 +503,12 @@ export const useAppStore = create<AppState>((set, get) => {
 
         const currentIsBad =
           !!state.selectedModel && isEmbedOnlyModel(state.selectedModel);
+        // Direct cloud models (Claude, GPT, Gemini, OpenRouter, Atlas) are
+        // deliberately absent from /v1/models, so a cloud selection must not
+        // be treated as "missing" or it gets wiped on every models refresh.
         const currentMissing =
           !!state.selectedModel &&
+          !isDirectCloudModelId(state.selectedModel) &&
           !models.some((m) => m.id === state.selectedModel);
 
         if (!state.selectedModel || currentIsBad || currentMissing) {
@@ -514,7 +523,16 @@ export const useAppStore = create<AppState>((set, get) => {
       }),
     setModelsLoading: (loading: boolean) => set({ modelsLoading: loading }),
     setSelectedModel: (model: string) => set({ selectedModel: model }),
-    setServerInfo: (info: ServerInfo | null) => set({ serverInfo: info }),
+    setServerInfo: (info: ServerInfo | null) =>
+      set((state) => {
+        // A server started with --model (e.g. a cloud deployment with no local
+        // models) should be usable without opening the picker first.
+        const serverModel = info?.model || '';
+        if (!state.selectedModel && serverModel && isDirectCloudModelId(serverModel)) {
+          return { serverInfo: info, selectedModel: serverModel };
+        }
+        return { serverInfo: info };
+      }),
     setSavings: (data: SavingsData | null) => set({ savings: data }),
     incrementSavings: (usage: TokenUsage) => {
       const cur = get().savings;
